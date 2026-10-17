@@ -1,0 +1,53 @@
+# Step 2C: calibrated band confirmed on 100 encounters at 67.0 and 67.5 m.
+environment:
+  initial_offset_m: {distribution: uniform, low: 67.0, high: 67.5}  # m; confirmed band.
+  closing_speed_mps: 0.5  # m/s; calibrated encounter condition.
+  u_max: 1.0e-4  # m/s^2 per axis; existing thrust limit.
+  dt: 1.0  # s; validated environment interval.
+  horizon_steps: 600  # steps; covers the calibrated encounter.
+  n: 1.1e-3  # rad/s; CW approximation near 550 km.
+  truth_model: cw
+  j2_enabled: false
+  drag_enabled: false
+perturbations:
+  rho0: 6.967e-13  # Vallado, Fundamentals of Astrodynamics and Applications, Table 8-4 (500 km row), as reproduced in arXiv:1610.02156. Secondary source; primary verification against the book is pending. Status: SOURCED, secondary.
+  h0: 500000.0  # Vallado, Fundamentals of Astrodynamics and Applications, Table 8-4 (500 km row), as reproduced in arXiv:1610.02156. Secondary source; primary verification against the book is pending. Status: SOURCED, secondary. Altitude above Earth's surface; the 500 km reference density is extrapolated to the scenario near 550 km, where it is roughly 0.46 times rho0.
+  scale_height: 63822.0  # Vallado, Fundamentals of Astrodynamics and Applications, Table 8-4 (500 km row), as reproduced in arXiv:1610.02156. Secondary source; primary verification against the book is pending. Status: SOURCED, secondary.
+  chief_ballistic_coeff_m2_per_kg: null  # PLACEHOLDER: requires object mass, cross-sectional area, and drag coefficient, each with a source.
+  deputy_ballistic_coeff_m2_per_kg: null  # PLACEHOLDER: requires object mass, cross-sectional area, and drag coefficient, each with a source.
+  storm:
+    peak_factor: null  # PLACEHOLDER: storm profile amplitude is not sourced.
+    rise_s: null  # PLACEHOLDER: storm rise duration is not sourced.
+    decay_s: null  # PLACEHOLDER: storm recovery time is not sourced.
+safety_geometry:
+  hard_body_radius_m: 10.0  # m; collision definition.
+  proximity_reference_m: 67.0  # m; reward reference, independent of shield.
+  sigma_miss_m: null  # PLACEHOLDER: no covariance model or cited miss-distance uncertainty source exists in this repository.
+  k_sigma: 3.0  # PLACEHOLDER: no project risk-acceptance source specifies the number of sigmas.
+  d_safe_legacy_unused_m: 106.7  # PLACEHOLDER: unused legacy environment-constructor value; not a derived shield radius.
+seeds: [0, 1, 2, 3, 4]
+evaluation_seeds: {start: 10000, count: 100}
+validation_seeds: {start: 20000, count: 20}
+oracle_preflight:
+  passive_collision_count: 69  # Expected passive collisions in the calibrated 100-encounter pre-flight.
+  min_margin_m: 0.25  # m; Minimum allowed oracle clearance margin for passive-colliding encounters.
+  offset_m: 67.0  # m; Fixed low endpoint used by the oracle pre-flight.
+  evaluation_seeds: {start: 10000, count: 100}  # Keep pre-flight coverage fixed for reduced smoke evaluations.
+training:
+  total_env_steps: 200000  # steps; about 333 episodes for this short baseline.
+  batch_size: 256  # transitions per update; SAC specification.
+  actor_lr: 3.0e-4  # 1; standard SAC optimization rate.
+  critic_lr: 3.0e-4  # 1; standard SAC optimization rate.
+  gamma: 0.99  # dimensionless; discounted return.
+  tau: 0.005  # dimensionless; Polyak target update.
+  warmup_steps: 5000  # steps; random exploration before updates.
+  replay_capacity: 100000  # transitions; uniform replay capacity.
+  target_entropy: -3.0  # nats; one per action dimension.
+  validation_interval_steps: 10000  # steps; checkpoint evaluation cadence.
+reward:
+  fuel_weight: 1.0  # per (m/s^2) applied per step; fuel proxy.
+  collision_penalty: 100.0  # one-time dimensionless penalty; hard-body event.
+  proximity_weight: 0.0  # primary run shaping weight; kept off for interpretation.
+  survival_bonus: 10.0  # dimensionless; horizon survival reward.
+ablations:
+  proximity_weight_values: [0.0, 0.01, 0.1]
